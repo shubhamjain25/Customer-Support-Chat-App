@@ -14,6 +14,7 @@ class VerifyCredentials{
 
   Future<String> createNewUser(String registeredEmail, String registeredPassword) async {
     try {
+
       UserCredential _user = await _auth.createUserWithEmailAndPassword(
           email: registeredEmail, password: registeredPassword);
 

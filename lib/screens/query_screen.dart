@@ -1,12 +1,18 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:customer_support_app/data/feedback_model.dart';
 import 'package:customer_support_app/data/message_model.dart';
 import 'package:customer_support_app/data/user_model.dart';
+import 'package:customer_support_app/screens/blank_screen.dart';
 import 'package:customer_support_app/screens/chat_screen.dart';
 import 'package:customer_support_app/services/database.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert' as convert;
+import 'chat_screen2.dart';
+import 'package:loading_animations/loading_animations.dart';
+import 'package:loading_animations/loading_animations.dart';
 
 class QueriesScreen extends StatefulWidget {
   @override
@@ -14,9 +20,10 @@ class QueriesScreen extends StatefulWidget {
 }
 
 class _QueriesScreenState extends State<QueriesScreen> {
-
-  List<CustomUser> userList = [];     // to store users with their corresponding mapped messages.
-  Map<int, List<Message>> messageMap = {};  // to get mapped messages from sheet, mapped to user ids.
+  List<CustomUser> userList =
+      []; // to store users with their corresponding mapped messages.
+  Map<int, List<Message>> messageMap =
+      {}; // to get mapped messages from sheet, mapped to user ids.
 
   String searchString = "";
   bool isLoading = false;
@@ -29,14 +36,12 @@ class _QueriesScreenState extends State<QueriesScreen> {
     messageMap = await FeedbackModel().getFeedback();
 
     messageMap.forEach((userId, messageList) {
-
       userList.add(CustomUser(userId: userId, messageList: messageList));
 
       print('$userId');
       messageList.forEach((element) {
         print(element.messageBody);
       });
-
     });
 
     setState(() {
@@ -52,15 +57,14 @@ class _QueriesScreenState extends State<QueriesScreen> {
     messageMap = await DatabaseMethods().getMessagesByUserID();
 
     messageMap.forEach((userId, messageList) {
-
-
+      messageList.sort((a, b) => a.timestamp
+          .compareTo(b.timestamp)); // to sort messages based on timestamp
       userList.add(CustomUser(userId: userId, messageList: messageList));
 
       print('$userId');
       messageList.forEach((element) {
         print(element.messageBody);
       });
-
     });
 
     setState(() {
@@ -91,8 +95,10 @@ class _QueriesScreenState extends State<QueriesScreen> {
         ? Scaffold(
             body: Center(
               child: Container(
-                child: CircularProgressIndicator(
-                  color: Colors.deepOrangeAccent,
+                child: LoadingBouncingGrid.square(
+                  size: 50,
+                  backgroundColor: Colors.blue,
+                  inverted: true,
                 ),
               ),
             ),
@@ -140,9 +146,7 @@ class _QueriesScreenState extends State<QueriesScreen> {
                           Icons.clear,
                           size: 30.0,
                         ),
-                        onPressed: () {
-
-                        },
+                        onPressed: () {},
                       ),
                     ),
                   ),
@@ -165,16 +169,38 @@ class _QueriesScreenState extends State<QueriesScreen> {
   }
 }
 
-class FeedbackTile extends StatelessWidget {
+class FeedbackTile extends StatefulWidget {
   int userID;
   List<Message> messageBody;
 
   FeedbackTile({required this.userID, required this.messageBody});
 
   @override
+  State<FeedbackTile> createState() => _FeedbackTileState();
+}
+
+class _FeedbackTileState extends State<FeedbackTile> {
+  bool isMessageLoading = false;
+
+  messageBtnTapped() async {
+    isMessageLoading = true;
+    setState(() {
+    });
+
+    String? currEmail = FirebaseAuth.instance.currentUser?.email;
+    print(currEmail);
+
+    await DatabaseMethods()
+        .enterChatRoom(widget.userID, currEmail!, widget.messageBody);
+
+    setState(() {});
+    isMessageLoading = false;
+  }
+
+  @override
   Widget build(BuildContext context) {
     CustomUser selectedUser =
-        CustomUser(userId: userID, messageList: messageBody);
+        CustomUser(userId: widget.userID, messageList: widget.messageBody);
 
     print("In Feedback Tile");
     return GestureDetector(
@@ -182,7 +208,7 @@ class FeedbackTile extends StatelessWidget {
         Navigator.push(
           context,
           MaterialPageRoute(
-              builder: (context) => ChatScreen(selectedUser: selectedUser)),
+              builder: (context) => ChatScreen2(selectedUser: selectedUser)),
         );
       },
       child: Container(
@@ -195,25 +221,55 @@ class FeedbackTile extends StatelessWidget {
         child: Column(
           children: <Widget>[
             Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: <Widget>[
-                Container(
-                  height: 40,
-                  width: 40,
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.all(Radius.circular(16)),
-                    // child: Image.network('https://cdn-icons-png.flaticon.com/512/2102/2102633.png'),
-                    child: Image.asset("assets/images/user.png"),
-                  ),
-                ),
-                SizedBox(
-                  width: 20,
-                ),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(userID.toString()),
+                Row(
+                  children: <Widget>[
+                    Container(
+                      height: 40,
+                      width: 40,
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.all(Radius.circular(16)),
+                        // child: Image.network('https://cdn-icons-png.flaticon.com/512/2102/2102633.png'),
+                        child: Image.asset("assets/images/user.png"),
+                      ),
+                    ),
+                    SizedBox(
+                      width: 20,
+                    ),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(widget.userID.toString()),
+                      ],
+                    ),
                   ],
                 ),
+                isMessageLoading
+                    ? LoadingBouncingGrid.square(
+                        size: 20,
+                        backgroundColor: Colors.white,
+                        inverted: true,
+                      )
+                    : GestureDetector(
+                        onTap: () {
+                          messageBtnTapped();
+                        },
+                        child: Container(
+                          height: 40,
+                          width: 100,
+                          margin: EdgeInsets.only(right: 10),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          alignment: Alignment.center,
+                          child: const Text(
+                            "Message",
+                            style: TextStyle(fontWeight: FontWeight.w500),
+                          ),
+                        ),
+                      ),
               ],
             ),
           ],
@@ -222,7 +278,6 @@ class FeedbackTile extends StatelessWidget {
     );
   }
 }
-
 // var raw = await http.get(Uri.parse(
 //     'https://script.google.com/macros/s/AKfycbzg7y_t6tE9-tdXWJNaAYguvGhgD_FucQz4S2Tg/exec'));
 //

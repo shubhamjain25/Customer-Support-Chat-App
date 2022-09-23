@@ -1,5 +1,7 @@
 import 'package:customer_support_app/data/message_model.dart';
 import 'package:customer_support_app/data/user_model.dart';
+import 'package:customer_support_app/services/database.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:chat_bubbles/chat_bubbles.dart';
 
@@ -48,6 +50,11 @@ class _ChatScreenState extends State<ChatScreen> {
 
   void addMessage(String message) {
 
+
+    String? currEmail = FirebaseAuth.instance.currentUser?.email;
+    Message messageObj = Message(timestamp: DateTime.now().toString().substring(0,19), messageBody: message);
+    DatabaseMethods().uploadMessagesToDB(user.userId, currEmail!, messageObj);
+
     var messageBox = BubbleSpecialThree(
       text: message,
       isSender: true,
@@ -56,6 +63,7 @@ class _ChatScreenState extends State<ChatScreen> {
     );
 
     var now = DateTime.now();
+
     var dateBubble = DateChip(date: now);
 
     setState(() {
