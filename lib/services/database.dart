@@ -148,6 +148,35 @@ class DatabaseMethods {
     });
   }
 
+  Future<List<int>> getChatRoomsID() async{
+    List<int> roomIDList = [];
+
+    await FirebaseFirestore.instance
+        .collection("ChatRoom")
+        .get()
+        .then((value) {
+      var searchSnapshot = value;
+      var documents = searchSnapshot.docs;
+      documents.forEach((eachDocument) {
+        int roomID = eachDocument.data()["roomID"];
+        roomIDList.add(roomID);
+      });
+    });
+
+    // await FirebaseFirestore.instance.collection("ChatRoom").snapshots().forEach((snapshot) {
+    //   final qs = snapshot;
+    //   print("Printing Stuff---> ");
+    //   print(qs.docs);
+    //   qs.docs.forEach((query) {
+    //     print(query.data()["roomID"]);
+    //     int roomID = query.data()["roomID"];
+    //     roomIDList.add(roomID);
+    //   });
+    // });
+    print("<---Returning Stuff-->>");
+    return roomIDList;
+  }
+
   changeConversationMessages() {}
 
   uploadUserInfo(userMap) {

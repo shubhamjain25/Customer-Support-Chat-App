@@ -1,4 +1,5 @@
 import 'package:customer_support_app/screens/query_screen.dart';
+import 'package:customer_support_app/services/database.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
@@ -48,7 +49,7 @@ class HomePage extends StatelessWidget {
                 ),
               ),
             ),
-            SizedBox(
+            const SizedBox(
               height: 50,
             ),
             Container(
@@ -77,6 +78,35 @@ class HomePage extends StatelessWidget {
                 ),
               ),
             ),
+            const SizedBox(
+              height: 50,
+            ),
+            // Container(
+            //   // color: Colors.black,
+            //   child: Center(
+            //     child: GestureDetector(
+            //       onTap: () {
+            //         DatabaseMethods().getChatRoomsID();
+            //       },
+            //       child: Container(
+            //         alignment: Alignment.center,
+            //         width: double.infinity,
+            //         height: 65.0,
+            //         decoration: BoxDecoration(
+            //             color: Colors.white,
+            //             borderRadius: BorderRadius.circular(20)),
+            //         child: const Text(
+            //           "Queries 2",
+            //           textAlign: TextAlign.center,
+            //           style: TextStyle(
+            //               fontSize: 20,
+            //               fontWeight: FontWeight.w400,
+            //               color: Colors.black),
+            //         ),
+            //       ),
+            //     ),
+            //   ),
+            // ),
           ],
         ),
       ),

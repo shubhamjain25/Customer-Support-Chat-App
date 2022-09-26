@@ -20,10 +20,12 @@ class QueriesScreen extends StatefulWidget {
 }
 
 class _QueriesScreenState extends State<QueriesScreen> {
-  List<CustomUser> userList =
-      []; // to store users with their corresponding mapped messages.
-  Map<int, List<Message>> messageMap =
-      {}; // to get mapped messages from sheet, mapped to user ids.
+
+  List<CustomUser> allUserList = []; // to store all users with their corresponding mapped messages.
+  List<CustomUser> requiredUserList = [];
+  Map<int, List<Message>> messageMap = {}; // to get mapped messages from sheet, mapped to user ids.
+  List<int> roomIDList = [];
+  final fieldText = TextEditingController();
 
   String searchString = "";
   bool isLoading = false;
@@ -36,7 +38,7 @@ class _QueriesScreenState extends State<QueriesScreen> {
     messageMap = await FeedbackModel().getFeedback();
 
     messageMap.forEach((userId, messageList) {
-      userList.add(CustomUser(userId: userId, messageList: messageList));
+      allUserList.add(CustomUser(userId: userId, messageList: messageList));
 
       print('$userId');
       messageList.forEach((element) {
@@ -54,12 +56,20 @@ class _QueriesScreenState extends State<QueriesScreen> {
       isLoading = true;
     });
 
+    roomIDList = await DatabaseMethods().getChatRoomsID();
+    print("<HAVE ROOM ID LIST>");
     messageMap = await DatabaseMethods().getMessagesByUserID();
+    print("<HAVE MESSAGE MAP>");
 
     messageMap.forEach((userId, messageList) {
       messageList.sort((a, b) => a.timestamp
           .compareTo(b.timestamp)); // to sort messages based on timestamp
-      userList.add(CustomUser(userId: userId, messageList: messageList));
+      if (roomIDList.contains(userId)) {
+        allUserList.add(CustomUser(
+            userId: userId, messageList: messageList, chatRoomExists: true));
+      } else {
+        allUserList.add(CustomUser(userId: userId, messageList: messageList));
+      }
 
       print('$userId');
       messageList.forEach((element) {
@@ -67,17 +77,34 @@ class _QueriesScreenState extends State<QueriesScreen> {
       });
     });
 
+    requiredUserList = allUserList;
+
     setState(() {
       isLoading = false;
     });
   }
 
-  void searchBtnTapped() async {
+  void searchBtnTapped() {
     print("SearchButtonTapped for: " + searchString);
-    await DatabaseMethods().getUserByUsername(searchString);
-    // DatabaseMethods().getUserByUsername(searchString).get().then((val){
-    //   print(val.toString());
-    // });
+    List<CustomUser> searchedList = [];
+    for (var element in allUserList) {
+      if (element.userId.toString().contains(searchString)) {
+        searchedList.add(element);
+      }
+    }
+    requiredUserList = searchedList;
+    setState(() {});
+    print("After");
+  }
+
+  void crossBtnTapped() async {
+    fieldText.clear();
+
+    print("CrossBtnTapped");
+
+    requiredUserList = allUserList;
+
+    setState(() {});
     print("After");
   }
 
@@ -115,6 +142,7 @@ class _QueriesScreenState extends State<QueriesScreen> {
                 Padding(
                   padding: const EdgeInsets.all(15.0),
                   child: TextField(
+                    controller: fieldText,
                     onChanged: (value) {
                       searchString = value;
                     },
@@ -146,24 +174,64 @@ class _QueriesScreenState extends State<QueriesScreen> {
                           Icons.clear,
                           size: 30.0,
                         ),
-                        onPressed: () {},
+                        onPressed: () {
+                          crossBtnTapped();
+                        },
                       ),
                     ),
                   ),
                 ),
                 Container(
-                  // margin: const EdgeInsets.symmetric(vertical: 15),
-                  child: ListView.builder(
-                      shrinkWrap: true,
-                      itemCount: userList.length,
-                      physics: BouncingScrollPhysics(),
-                      itemBuilder: (context, index) {
-                        return FeedbackTile(
-                            userID: userList[index].userId,
-                            messageBody: userList[index].messageList);
-                      }),
+                  child: buildRowContainers(requiredUserList),
                 ),
+                // Container(
+                //   // margin: const EdgeInsets.symmetric(vertical: 15),
+                //   child: userList.isNotEmpty
+                //       ? ListView.builder(
+                //           shrinkWrap: true,
+                //           itemCount: userList.length,
+                //           physics: BouncingScrollPhysics(),
+                //           itemBuilder: (context, index) {
+                //             return FeedbackTile(
+                //               userID: userList[index].userId,
+                //               messageBody: userList[index].messageList,
+                //               chatRoomExists: userList[index].chatRoomExists,
+                //             );
+                //           })
+                //       : const Center(
+                //           child: Text(
+                //             "No such record exist",
+                //             style:
+                //                 TextStyle(color: Colors.blue, fontSize: 20.0),
+                //           ),
+                //         ),
+                // ),
               ],
+            ),
+          );
+  }
+
+  Widget buildRowContainers(List<CustomUser> userList) {
+    return userList.isNotEmpty
+        ? ListView.builder(
+            shrinkWrap: true,
+            itemCount: userList.length,
+            physics: BouncingScrollPhysics(),
+            itemBuilder: (context, index) {
+              return FeedbackTile(
+                userID: userList[index].userId,
+                messageBody: userList[index].messageList,
+                chatRoomExists: userList[index].chatRoomExists,
+              );
+            })
+        : Container(
+            width: double.infinity,
+            height: 300,
+            child: const Center(
+              child: Text(
+                "No such records exist",
+                style: TextStyle(color: Colors.blue, fontSize: 20.0),
+              ),
             ),
           );
   }
@@ -172,8 +240,12 @@ class _QueriesScreenState extends State<QueriesScreen> {
 class FeedbackTile extends StatefulWidget {
   int userID;
   List<Message> messageBody;
+  bool chatRoomExists;
 
-  FeedbackTile({required this.userID, required this.messageBody});
+  FeedbackTile(
+      {required this.userID,
+      required this.messageBody,
+      this.chatRoomExists = false});
 
   @override
   State<FeedbackTile> createState() => _FeedbackTileState();
@@ -183,9 +255,9 @@ class _FeedbackTileState extends State<FeedbackTile> {
   bool isMessageLoading = false;
 
   messageBtnTapped() async {
+    widget.chatRoomExists = true;
     isMessageLoading = true;
-    setState(() {
-    });
+    setState(() {});
 
     String? currEmail = FirebaseAuth.instance.currentUser?.email;
     print(currEmail);
@@ -221,6 +293,7 @@ class _FeedbackTileState extends State<FeedbackTile> {
         child: Column(
           children: <Widget>[
             Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: <Widget>[
                 Row(
@@ -251,24 +324,41 @@ class _FeedbackTileState extends State<FeedbackTile> {
                         backgroundColor: Colors.white,
                         inverted: true,
                       )
-                    : GestureDetector(
-                        onTap: () {
-                          messageBtnTapped();
-                        },
-                        child: Container(
-                          height: 40,
-                          width: 100,
-                          margin: EdgeInsets.only(right: 10),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(16),
+                    : Row(
+                        children: [
+                          Container(
+                            width: 20.0,
+                            height: 20.0,
+                            decoration: BoxDecoration(
+                              color: widget.chatRoomExists
+                                  ? Colors.green
+                                  : Colors.red,
+                              shape: BoxShape.circle,
+                            ),
                           ),
-                          alignment: Alignment.center,
-                          child: const Text(
-                            "Message",
-                            style: TextStyle(fontWeight: FontWeight.w500),
+                          SizedBox(
+                            width: 20,
                           ),
-                        ),
+                          GestureDetector(
+                            onTap: () {
+                              messageBtnTapped();
+                            },
+                            child: Container(
+                              height: 40,
+                              width: 100,
+                              margin: EdgeInsets.only(right: 10),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                              alignment: Alignment.center,
+                              child: const Text(
+                                "Message",
+                                style: TextStyle(fontWeight: FontWeight.w500),
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
               ],
             ),

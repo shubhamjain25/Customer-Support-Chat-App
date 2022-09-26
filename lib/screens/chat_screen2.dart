@@ -133,7 +133,7 @@ class _ChatScreen2State extends State<ChatScreen2> {
                 dateFormat: DateFormat('yyyy-MMM-dd'),
                 timeFormat: DateFormat('HH:mm'),
                 messages: messagesList2,
-                showUserAvatar: false,
+                showUserAvatar: true,
                 showAvatarForEveryMessage: false,
                 scrollToBottom: true,
                 onPressAvatar: (ChatUser user) {
@@ -148,6 +148,7 @@ class _ChatScreen2State extends State<ChatScreen2> {
                 inputTextStyle: TextStyle(fontSize: 16.0),
                 inputContainerStyle: BoxDecoration(
                   border: Border.all(width: 0.0),
+                  borderRadius: BorderRadius.circular(12),
                   color: Colors.white,
                 ),
                 // messageDecorationBuilder: (ChatMessage msg, bool? isUser){
